@@ -18,7 +18,7 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai-chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [...messages, userMessage] })
@@ -41,7 +41,26 @@ export default function Chat() {
   return (
     <div style={{ backgroundColor: '#343541', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
       <h1 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>💬 AI Campaign Builder Assistant</h1>
-      
+
+      {/* OAuth Connect Google Ads Button */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <a
+          href="https://accounts.google.com/o/oauth2/v2/auth?client_id=1006122658847-7hilh8sim23on3d3tihcs1j440b6ab0mq.apps.googleusercontent.com&redirect_uri=https://ai-bot-for-marketing-67ol.vercel.app/api/oauth2callback&response_type=code&scope=https://www.googleapis.com/auth/adwords&access_type=offline&prompt=consent"
+          style={{
+            backgroundColor: '#10a37f',
+            color: 'white',
+            padding: '10px 18px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            fontSize: '16px'
+          }}
+        >
+          🔗 Connect Google Ads
+        </a>
+      </div>
+
+      {/* Chat Message List */}
       <div style={{
         maxWidth: '720px',
         margin: '0 auto',
@@ -75,6 +94,7 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Chat Input */}
       <form onSubmit={sendMessage} style={{
         display: 'flex',
         maxWidth: '720px',
