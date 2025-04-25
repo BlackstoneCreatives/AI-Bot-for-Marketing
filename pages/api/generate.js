@@ -1,3 +1,5 @@
+// pages/api/generate.js
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -5,35 +7,25 @@ export default async function handler(req, res) {
 
   const { prompt } = req.body;
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: 'Missing OpenAI API key in environment' });
+  if (!prompt) {
+    return res.status(400).json({ error: 'Missing prompt' });
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7
-      })
-    });
+    // 👇 Simulated GPT response — no billing required
+    const result = `
+✅ Campaign Name: Pet Rescue Awareness - Local
+🧠 Keywords: ["dog adoption in Atlanta", "rescue shelter near me"]
+📣 Ad Copy:
+Headline: "Adopt a Pet Today"
+Description: "Find your new best friend. Local shelters, loving animals."
 
-    const data = await response.json();
+(Using Notion best practices: RSAs, local keywords, tracked conversions, etc.)
+    `.trim();
 
-    if (!response.ok) {
-      console.error("OpenAI Error:", data);
-      throw new Error(data.error?.message || 'OpenAI API request failed');
-    }
-
-    const result = data.choices?.[0]?.message?.content || "No content returned from OpenAI.";
     res.status(200).json({ result });
   } catch (err) {
-    console.error("Server Error:", err.message);
-    res.status(500).json({ error: err.message || "Something went wrong." });
+    console.error('Mock error:', err);
+    res.status(500).json({ error: 'Something went wrong' });
   }
 }
