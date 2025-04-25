@@ -1,0 +1,17 @@
+{
+  "name": "ai-bot-for-marketing",
+  "version": "1.0.0",
+  "description": "*Automatically synced with your [v0.dev](https://v0.dev) deployments*",
+  "main": "index.js",
+˚z  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "next": "^15.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}
