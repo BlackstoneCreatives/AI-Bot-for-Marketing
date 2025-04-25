@@ -30,8 +30,9 @@ export default function Chat() {
         ...prev,
         { role: 'bot', text: '⚠️ Landing page audit failed.' },
       ]);
-    }
-  };
+ } finally {
+  setLoading(false);
+}
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -48,11 +49,12 @@ export default function Chat() {
       return;
     }
 
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+try {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: input.trim() }),
+  });
       });
 
       const data = await res.json();
