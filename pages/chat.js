@@ -1,103 +1,117 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-export default function ChatPage() {
+export default function Chat() {
   const [messages, setMessages] = useState([
-    { sender: 'ai', text: "👋 Hi there! I'm your AI ads assistant. What's your organization's name?" }
+    { role: 'ai', text: "👋 Hey! I'm your AI Campaign Assistant. Let’s get your Google Ads campaign started. What's your organization’s name?" }
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSend = async (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const newMessages = [...messages, { sender: 'user', text: input }];
-    setMessages(newMessages);
+    const userMessage = { role: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setLoading(true);
 
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: input })
-    });
+    try {
+      const res = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, userMessage] })
+      });
 
-    const data = await res.json();
-    setMessages(prev => [...prev, { sender: 'ai', text: data.result || '🤖 Hmm, I didn’t get that.' }]);
+      const data = await res.json();
+      const aiMessage = { role: 'ai', text: data.result || '🤖 No response from AI.' };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'ai', text: '⚠️ Error communicating with AI.' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.chatContainer}>
+    <div style={{ backgroundColor: '#343541', color: 'white', minHeight: '100vh', padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '20px' }}>💬 AI Campaign Builder Assistant</h1>
+      
+      <div style={{
+        maxWidth: '720px',
+        margin: '0 auto',
+        background: '#444654',
+        borderRadius: '8px',
+        padding: '20px',
+        overflowY: 'auto',
+        height: '70vh'
+      }}>
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.bubble,
-              alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-              background: msg.sender === 'user' ? '#007bff' : '#e5e7eb',
-              color: msg.sender === 'user' ? '#fff' : '#111827'
-            }}
-          >
-            {msg.text}
+          <div key={i} style={{
+            display: 'flex',
+            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+            marginBottom: '10px'
+          }}>
+            <div style={{
+              background: msg.role === 'user' ? '#1e90ff' : '#555',
+              color: 'white',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              maxWidth: '70%',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {msg.text}
+            </div>
           </div>
         ))}
+        {loading && (
+          <div style={{ color: '#999', fontSize: '0.9rem', padding: '6px' }}>AI is typing...</div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSend} style={styles.inputWrapper}>
+
+      <form onSubmit={sendMessage} style={{
+        display: 'flex',
+        maxWidth: '720px',
+        margin: '20px auto 0',
+        gap: '10px'
+      }}>
         <input
-          style={styles.input}
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
+          placeholder="Type your message here..."
+          style={{
+            flexGrow: 1,
+            padding: '12px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '1rem',
+            background: '#202123',
+            color: 'white'
+          }}
         />
-        <button type="submit" style={styles.button}>Send</button>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            backgroundColor: '#10a37f',
+            color: 'white',
+            border: 'none',
+            padding: '12px 18px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          Send
+        </button>
       </form>
     </div>
   );
 }
-
-const styles = {
-  wrapper: {
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#f9fafb',
-    fontFamily: 'Segoe UI, sans-serif'
-  },
-  chatContainer: {
-    flex: 1,
-    padding: '20px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  bubble: {
-    maxWidth: '75%',
-    padding: '12px 16px',
-    borderRadius: '18px',
-    marginBottom: '10px',
-    fontSize: '15px',
-    lineHeight: 1.4
-  },
-  inputWrapper: {
-    display: 'flex',
-    padding: '10px',
-    borderTop: '1px solid #e5e7eb',
-    backgroundColor: '#fff'
-  },
-  input: {
-    flex: 1,
-    padding: '10px',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    marginRight: '10px',
-    fontSize: '15px'
-  },
-  button: {
-    backgroundColor: '#007bff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '10px 16px',
-    fontSize: '15px',
-    cursor: 'pointer'
-  }
-};
