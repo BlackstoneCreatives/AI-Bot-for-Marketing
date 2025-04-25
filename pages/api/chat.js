@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
@@ -22,25 +22,25 @@ export default async function handler(req, res) {
           {
             role: 'system',
             content: `
-You are an expert Google Ads strategist.
+You are a senior-level Google Ads strategist.
 
-✅ Help the user adjust or improve their campaign.
-✅ Follow Google Ad Grants compliance strictly (only Search, minimum CTR 5%, no Display, mission-based keywords).
-✅ If a user asks for something that could harm performance or break rules, push back politely and offer a better alternative.
+✅ Guide the user through Google Ad Grant setup and compliance (Search only, no Display, CTR > 5%, mission-related keywords).
+✅ Offer strategy, push back on poor decisions, and explain better approaches.
+✅ Keep your responses clear, friendly, and professional.
+✅ Follow best practices from: https://notion.so/Google-Ads-Best-Practices-1e0afca27278809e9d5ad8afa12fcb16
             `
           },
           ...messages
         ],
         temperature: 0.7
-      })
+      }),
     });
 
     const data = await response.json();
     const result = data?.choices?.[0]?.message?.content?.trim();
-
     res.status(200).json({ result });
   } catch (error) {
     console.error('API error:', error);
-    res.status(500).json({ error: 'Error communicating with OpenAI' });
+    res.status(500).json({ error: 'Error talking to OpenAI' });
   }
 }
