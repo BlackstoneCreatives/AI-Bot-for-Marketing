@@ -1,35 +1,91 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-export default function AdCampaignBuilder() {
-  const [form, setForm] = useState({
-    orgName: '',
-    website: '',
-    goal: '',
-    service: '',
-    location: '',
-    budget: '',
-    message: ''
-  });
-  const [output, setOutput] = useState('');
+export default function Home() {
+  const onboardingQuestions = [
+    "What's your organization's name?",
+    "What's your website URL?",
+    "What's the main goal of your campaign? (donations, awareness, leads, etc.)",
+    "What services or offerings are we promoting?",
+    "Where are your customers or donors located?",
+    "What's your monthly ad budget?",
+    "Is there a key message or special offer you'd like to highlight?",
+    "⭐️ Do you have any keywords in mind? (No worries if not — I can suggest good ones!)",
+    "✅ Do you have a Google Ads account? (yes/no)",
+    "✅ Do you have Google Analytics 4 (GA4) set up? (yes/no)",
+    "✅ Do you have Google Tag Manager set up? (yes/no)",
+    "✅ Have you set up any conversion tracking yet? (like forms, donations?) (yes/no)"
+  ];
+
+  const [messages, setMessages] = useState([{ role: 'ai', text: onboardingQuestions[0] }]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState({});
+  const [userInput, setUserInput] = useState('');
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleSend = async () => {
+    if (!userInput.trim()) return;
+
+    const newMessages = [...messages, { role: 'user', text: userInput }];
+    setMessages(newMessages);
+
+    if (!onboardingComplete) {
+      const fieldNames = [
+        'orgName', 'website', 'goal', 'service', 'location', 'budget', 'message',
+        'keywords', 'googleAds', 'ga4', 'gtm', 'conversionTracking'
+      ];
+      const currentField = fieldNames[currentStep];
+
+      setFormData(prev => ({ ...prev, [currentField]: userInput }));
+      setUserInput('');
+
+      if (currentStep < onboardingQuestions.length - 1) {
+        setCurrentStep(currentStep + 1);
+        setMessages(prev => [...prev, { role: 'ai', text: onboardingQuestions[currentStep + 1] }]);
+      } else {
+        setOnboardingComplete(true);
+        setMessages(prev => [...prev, { role: 'ai', text: "Awesome! Generating your first Google Ads campaign draft... 🚀" }]);
+        generateCampaign();
+      }
+    } else {
+      // Post-onboarding: Live chat phase
+      setUserInput('');
+      setMessages(prev => [...prev, { role: 'ai', text: "Got it! Let me think..." }]);
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userInput })
+      });
+      const data = await res.json();
+
+      setMessages(prev => [...prev, { role: 'ai', text: data.result || "No response from AI yet." }]);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const generateCampaign = async () => {
     setLoading(true);
-    setOutput('');
 
-    const prompt = `Create a Google Ads campaign for a nonprofit called ${form.orgName}.
-Website: ${form.website}
-Their goal is to ${form.goal}, targeting ${form.location}.
-Service Type: ${form.service}.
-Monthly Budget: $${form.budget}.
-Key Message: "${form.message}"
-Return: Campaign name, 1-2 ad groups, keywords (with match types), 2 ad variations, suggested daily budget & bidding strategy.`;
+    const prompt = `
+Organization: ${formData.orgName}
+Website: ${formData.website}
+Goal: ${formData.goal}
+Service: ${formData.service}
+Location: ${formData.location}
+Budget: ${formData.budget}
+Key Message: ${formData.message}
+Keywords (optional): ${formData.keywords}
+
+IMPORTANT: Ensure the campaign complies with all Google Ad Grants rules. Only Search campaigns allowed, minimum CTR 5%, no commercial intent keywords, mission-based targeting only.
+
+Build a complete Google Ads campaign plan including:
+- Campaign name
+- 1-2 Ad groups
+- Keyword lists (with match types)
+- 2 ad variations
+- Suggested bidding strategy
+- Daily budget recommendation
+`;
 
     const res = await fetch('/api/generate', {
       method: 'POST',
@@ -38,54 +94,42 @@ Return: Campaign name, 1-2 ad groups, keywords (with match types), 2 ad variatio
     });
 
     const data = await res.json();
-    setOutput(data.result || 'No response from AI');
     setLoading(false);
+
+    setMessages(prev => [...prev, { role: 'ai', text: data.result || "No response from AI." }]);
   };
 
   return (
-    <div className="container py-5">
-      <h1 className="mb-3">AI Campaign Builder</h1>
-      <p className="mb-4 text-muted">
-        Fill out a few key details about your client or nonprofit below. Our AI will instantly generate a full Google Ads campaign draft — including ad copy, keyword suggestions, and bidding strategy — tailored to their goals.
-      </p>
+    <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center">
+      <h1 className="text-3xl font-bold mb-4">🧠 AI Campaign Builder Assistant</h1>
 
-      <form onSubmit={handleSubmit} className="mb-5">
-        <FormField label="Organization Name" name="orgName" value={form.orgName} handleChange={handleChange} />
-        <FormField label="Website URL" name="website" value={form.website} handleChange={handleChange} />
-        <FormField label="Campaign Goal (e.g., Donations, Awareness)" name="goal" value={form.goal} handleChange={handleChange} />
-        <FormField label="Service Type (e.g., Animal Rescue, Education)" name="service" value={form.service} handleChange={handleChange} />
-        <FormField label="Location Targeting (City, State, or Region)" name="location" value={form.location} handleChange={handleChange} />
-        <FormField label="Monthly Budget (USD)" name="budget" value={form.budget} handleChange={handleChange} type="number" />
-        <FormField label="Key Message or Offer" name="message" value={form.message} handleChange={handleChange} isTextArea />
+      <div className="w-full max-w-2xl bg-white shadow p-4 rounded-md flex flex-col space-y-3 overflow-y-auto h-[600px]">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={msg.role === 'ai' ? 'text-left' : 'text-right'}>
+            <span className={msg.role === 'ai' ? 'text-blue-600' : 'text-green-600'}>
+              {msg.text}
+            </span>
+          </div>
+        ))}
+        {loading && <div className="text-center text-gray-400">Generating campaign...</div>}
+      </div>
 
+      <div className="w-full max-w-2xl mt-4 flex space-x-2">
+        <input
+          type="text"
+          className="border border-gray-300 p-2 rounded flex-1"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="Type your answer..."
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+        />
         <button
-          type="submit"
-          className="btn btn-primary w-100"
-          disabled={loading}
+          onClick={handleSend}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          {loading ? 'Generating...' : 'Generate Campaign'}
+          Send
         </button>
-      </form>
-
-      {output && (
-        <div className="card shadow-sm p-4">
-          <h2 className="h5">🎯 AI-Generated Campaign Output</h2>
-          <pre className="mt-3 text-muted">{output}</pre>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FormField({ label, name, value, handleChange, type = 'text', isTextArea = false }) {
-  return (
-    <div className="mb-3">
-      <label htmlFor={name} className="form-label">{label}</label>
-      {isTextArea ? (
-        <textarea id={name} name={name} value={value} onChange={handleChange} className="form-control" rows="3" required />
-      ) : (
-        <input type={type} id={name} name={name} value={value} onChange={handleChange} className="form-control" required />
-      )}
+      </div>
     </div>
   );
 }
