@@ -3,10 +3,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Only POST allowed' });
   }
 
-  const { message } = req.body;
+  const { messages } = req.body;
 
-  if (!message || !process.env.OPENAI_API_KEY) {
-    return res.status(400).json({ error: 'Missing message or API key' });
+  if (!messages || !Array.isArray(messages) || !process.env.OPENAI_API_KEY) {
+    return res.status(400).json({ error: 'Missing messages array or API key' });
   }
 
   try {
@@ -27,9 +27,9 @@ You are an expert Google Ads strategist.
 ✅ Help the user adjust or improve their campaign.
 ✅ Follow Google Ad Grants compliance strictly (only Search, minimum CTR 5%, no Display, mission-based keywords).
 ✅ If a user asks for something that could harm performance or break rules, push back politely and offer a better alternative.
-`
+            `
           },
-          { role: 'user', content: message }
+          ...messages
         ],
         temperature: 0.7
       })
@@ -40,7 +40,7 @@ You are an expert Google Ads strategist.
 
     res.status(200).json({ result });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error communicating with AI' });
+    console.error('API error:', error);
+    res.status(500).json({ error: 'Error communicating with OpenAI' });
   }
 }
