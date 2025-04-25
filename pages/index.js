@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function AdCampaignBuilder() {
+export default function Home() {
   const [form, setForm] = useState({
     orgName: '',
     website: '',
@@ -10,6 +10,7 @@ export default function AdCampaignBuilder() {
     budget: '',
     message: ''
   });
+
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,13 +48,14 @@ Return: Campaign name, 1-2 ad groups, keywords (with match types), 2 ad variatio
       <p className="mb-6 text-gray-600 text-center max-w-xl">
         Fill out a few key details about your client or nonprofit below. Our AI will instantly generate a full Google Ads campaign draft — including ad copy, keyword suggestions, and bidding strategy — tailored to their goals.
       </p>
+
       <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-white p-6 rounded-xl shadow-md space-y-4">
         <FormField label="Organization Name" name="orgName" value={form.orgName} handleChange={handleChange} />
         <FormField label="Website URL" name="website" value={form.website} handleChange={handleChange} />
         <FormField label="Campaign Goal (e.g., Donations, Awareness)" name="goal" value={form.goal} handleChange={handleChange} />
         <FormField label="Service Type (e.g., Animal Rescue, Education)" name="service" value={form.service} handleChange={handleChange} />
         <FormField label="Location Targeting (City, State, or Region)" name="location" value={form.location} handleChange={handleChange} />
-        <FormField label="Monthly Budget (USD)" name="budget" value={form.budget} handleChange={handleChange} type="number" />
+        <FormField label="Monthly Budget (USD)" name="budget" type="number" value={form.budget} handleChange={handleChange} />
         <FormField label="Key Message or Offer" name="message" value={form.message} handleChange={handleChange} isTextArea />
 
         <button
@@ -82,9 +84,23 @@ function FormField({ label, name, value, handleChange, type = 'text', isTextArea
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       {isTextArea ? (
-        <textarea name={name} value={value} onChange={handleChange} className="w-full border border-gray-300 rounded p-2" rows="3" required />
+        <textarea
+          name={name}
+          value={value}
+          onChange={handleChange}
+          className="w-full border border-gray-300 rounded p-2"
+          rows="3"
+          required
+        />
       ) : (
-        <input type={type} name={name} value={value} onChange={handleChange} className="w-full border border-gray-300 rounded p-2" required />
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={handleChange}
+          className="w-full border border-gray-300 rounded p-2"
+          required
+        />
       )}
     </div>
   );
