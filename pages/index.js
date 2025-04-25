@@ -1,6 +1,7 @@
+import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useState } from 'react';
 
-export default function Home() {
+export default function AdCampaignBuilder() {
   const [form, setForm] = useState({
     orgName: '',
     website: '',
@@ -10,7 +11,6 @@ export default function Home() {
     budget: '',
     message: ''
   });
-
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -43,36 +43,34 @@ Return: Campaign name, 1-2 ad groups, keywords (with match types), 2 ad variatio
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-blue-50 p-6 flex flex-col items-center">
-      <h1 className="text-4xl font-extrabold mb-2 text-gray-800">AI Campaign Builder</h1>
-      <p className="mb-6 text-gray-600 text-center max-w-xl">
+    <div className="container py-5">
+      <h1 className="mb-3">AI Campaign Builder</h1>
+      <p className="mb-4 text-muted">
         Fill out a few key details about your client or nonprofit below. Our AI will instantly generate a full Google Ads campaign draft — including ad copy, keyword suggestions, and bidding strategy — tailored to their goals.
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-white p-6 rounded-xl shadow-md space-y-4">
+      <form onSubmit={handleSubmit} className="mb-5">
         <FormField label="Organization Name" name="orgName" value={form.orgName} handleChange={handleChange} />
         <FormField label="Website URL" name="website" value={form.website} handleChange={handleChange} />
         <FormField label="Campaign Goal (e.g., Donations, Awareness)" name="goal" value={form.goal} handleChange={handleChange} />
         <FormField label="Service Type (e.g., Animal Rescue, Education)" name="service" value={form.service} handleChange={handleChange} />
         <FormField label="Location Targeting (City, State, or Region)" name="location" value={form.location} handleChange={handleChange} />
-        <FormField label="Monthly Budget (USD)" name="budget" type="number" value={form.budget} handleChange={handleChange} />
+        <FormField label="Monthly Budget (USD)" name="budget" value={form.budget} handleChange={handleChange} type="number" />
         <FormField label="Key Message or Offer" name="message" value={form.message} handleChange={handleChange} isTextArea />
 
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-semibold"
+          className="btn btn-primary w-100"
           disabled={loading}
         >
-          {loading ? 'Generating Campaign...' : 'Generate Campaign'}
+          {loading ? 'Generating...' : 'Generate Campaign'}
         </button>
       </form>
 
       {output && (
-        <div className="mt-10 w-full max-w-2xl bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">🎯 AI-Generated Campaign Output</h2>
-          <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-4 rounded-lg overflow-auto max-h-[500px]">
-            {output}
-          </pre>
+        <div className="card shadow-sm p-4">
+          <h2 className="h5">🎯 AI-Generated Campaign Output</h2>
+          <pre className="mt-3 text-muted">{output}</pre>
         </div>
       )}
     </div>
@@ -81,26 +79,12 @@ Return: Campaign name, 1-2 ad groups, keywords (with match types), 2 ad variatio
 
 function FormField({ label, name, value, handleChange, type = 'text', isTextArea = false }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <div className="mb-3">
+      <label htmlFor={name} className="form-label">{label}</label>
       {isTextArea ? (
-        <textarea
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded p-2"
-          rows="3"
-          required
-        />
+        <textarea id={name} name={name} value={value} onChange={handleChange} className="form-control" rows="3" required />
       ) : (
-        <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={handleChange}
-          className="w-full border border-gray-300 rounded p-2"
-          required
-        />
+        <input type={type} id={name} name={name} value={value} onChange={handleChange} className="form-control" required />
       )}
     </div>
   );
