@@ -54,7 +54,6 @@ export default function Chat() {
     setInput('');
 
     if (!onboardingComplete) {
-      // Onboarding flow
       fakeBotTyping(() => {
         const nextQuestionIndex = currentQuestion + 1;
         if (nextQuestionIndex < onboardingQuestions.length) {
@@ -71,7 +70,6 @@ export default function Chat() {
         }
       });
     } else {
-      // Normal chat flow after onboarding
       fakeBotTyping(() => {
         setMessages((prev) => [
           ...prev,
@@ -105,4 +103,38 @@ export default function Chat() {
       {onboardingComplete && (
         <div style={{ marginBottom: '1rem' }}>
           <strong>Quick Prompts:</strong>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap:
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+            {quickPrompts.map((prompt, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleQuickPrompt(prompt)}
+                style={{ padding: '0.5rem', cursor: 'pointer' }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={resetOnboarding}
+            style={{ marginTop: '1rem', padding: '0.5rem', background: 'red', color: 'white', cursor: 'pointer' }}
+          >
+            Connect New Client
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your response..."
+          style={{ flex: 1, padding: '0.5rem' }}
+        />
+        <button onClick={handleSend} disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+          {loading ? '...' : 'Send'}
+        </button>
+      </div>
+    </div>
+  );
+}
