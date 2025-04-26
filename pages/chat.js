@@ -16,7 +16,15 @@ export default function Chat() {
     "Optimize my targeting"
   ];
 
-  const [messages, setMessages] = useState([]);
+  // 🚀 UPDATED HERE: Load messages from localStorage
+  const [messages, setMessages] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem('chatMessages');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -27,9 +35,7 @@ export default function Chat() {
     const alreadyOnboarded = localStorage.getItem('onboardingComplete') === 'true';
     setOnboardingComplete(alreadyOnboarded);
 
-    if (alreadyOnboarded) {
-      setMessages([{ role: 'bot', text: "Welcome back! What would you like help with today?" }]);
-    } else {
+    if (!alreadyOnboarded && messages.length === 0) {
       setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
     }
   }, []);
@@ -38,12 +44,19 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // 🚀 NEW: Save messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
   const fakeBotTyping = (callback) => {
     setLoading(true);
     setTimeout(() => {
       callback();
       setLoading(false);
-    }, 1000);
+    }, 800);
   };
 
   const handleSend = () => {
@@ -85,30 +98,44 @@ export default function Chat() {
 
   const resetOnboarding = () => {
     localStorage.removeItem('onboardingComplete');
+    localStorage.removeItem('chatMessages');
     window.location.reload();
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1rem' }}>
+    <div className="container py-4" style={{ maxWidth: '700px' }}>
+      <h2 className="text-center mb-4">AI Campaign Assistant</h2>
+
+      <div className="mb-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
         {messages.map((msg, idx) => (
-          <div key={idx} style={{ marginBottom: '0.5rem', textAlign: msg.role === 'bot' ? 'left' : 'right' }}>
-            <strong>{msg.role === 'bot' ? 'Bot:' : 'You:'}</strong> {msg.text}
+          <div key={idx} className="d-flex mb-2" style={{ justifyContent: msg.role === 'bot' ? 'flex-start' : 'flex-end' }}>
+            <div
+              className={`p-3 rounded ${msg.role === 'bot' ? 'bg-light' : 'bg-primary text-white'}`}
+              style={{ maxWidth: '75%', borderRadius: '20px' }}
+            >
+              {msg.text}
+            </div>
           </div>
         ))}
-        {loading && <div><em>Bot is typing...</em></div>}
+        {loading && (
+          <div className="d-flex mb-2" style={{ justifyContent: 'flex-start' }}>
+            <div className="p-3 rounded bg-light" style={{ maxWidth: '75%', borderRadius: '20px' }}>
+              <em>Bot is typing...</em>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       {onboardingComplete && (
-        <div style={{ marginBottom: '1rem' }}>
+        <div className="mb-3">
           <strong>Quick Prompts:</strong>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <div className="d-flex flex-wrap mt-2" style={{ gap: '0.5rem' }}>
             {quickPrompts.map((prompt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleQuickPrompt(prompt)}
-                style={{ padding: '0.5rem', cursor: 'pointer' }}
+                className="btn btn-outline-primary btn-sm"
               >
                 {prompt}
               </button>
@@ -116,22 +143,22 @@ export default function Chat() {
           </div>
           <button
             onClick={resetOnboarding}
-            style={{ marginTop: '1rem', padding: '0.5rem', background: 'red', color: 'white', cursor: 'pointer' }}
+            className="btn btn-danger btn-sm mt-3"
           >
             Connect New Client
           </button>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="input-group">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your response..."
-          style={{ flex: 1, padding: '0.5rem' }}
+          className="form-control"
+          placeholder="Type your message..."
         />
-        <button onClick={handleSend} disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+        <button onClick={handleSend} disabled={loading} className="btn btn-primary">
           {loading ? '...' : 'Send'}
         </button>
       </div>
