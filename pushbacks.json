@@ -1,0 +1,62 @@
+[
+  {
+    "situation": "Display Ads Request",
+    "pushback": "Display ads aren't allowed under the Google Ad Grant program. Instead, we can optimize Search campaigns with mission-focused keywords to drive targeted traffic while staying compliant."
+  },
+  {
+    "situation": "Broad Generic Keywords",
+    "pushback": "Broader keywords might sound appealing, but they often waste budget and lower your CTR. I recommend we focus on more specific, mission-aligned keywords to keep results strong."
+  },
+  {
+    "situation": "Single Keyword Ad Groups",
+    "pushback": "Single-keyword ad groups often limit coverage and lower performance. It's better to group 5–20 closely related keywords per ad group for better quality scores and CTR."
+  },
+  {
+    "situation": "Too Few Headlines in RSAs",
+    "pushback": "RSAs work best when we provide 5 or more headlines and at least 3 descriptions. It gives Google more combinations to test for better performance."
+  },
+  {
+    "situation": "No Conversion Tracking",
+    "pushback": "Without conversion tracking, we can't prove success or optimize properly. I can walk you through setting up simple GA4 or GTM tracking easily."
+  },
+  {
+    "situation": "Clickbait Headlines",
+    "pushback": "Clickbait headlines can lower trust and violate ad policies. Let's use authentic, mission-driven messaging to attract better quality clicks."
+  },
+  {
+    "situation": "No Daily Budget Cap",
+    "pushback": "Setting a daily budget cap helps control pacing and ensures we meet Grant requirements. I'll recommend a daily budget based on your monthly goals."
+  },
+  {
+    "situation": "Only Broad Match Keywords",
+    "pushback": "Broad match alone can bring unqualified clicks. A mix of phrase match and exact match will drive better quality results aligned to your mission."
+  },
+  {
+    "situation": "Targeting Countries Outside Service Area",
+    "pushback": "Targeting broader areas can hurt ad relevance and CTR. It's best to focus on your real service areas to attract more meaningful traffic."
+  },
+  {
+    "situation": "No Ad Variations",
+    "pushback": "Multiple ad variations help Google optimize performance automatically. Building at least 2–3 strong versions gives your campaign the best shot."
+  },
+  {
+    "situation": "Aggressive Language / False Claims",
+    "pushback": "Strong claims like 'Best' or 'Cheapest' can violate policies. It's better to highlight real mission value in clear, factual language."
+  },
+  {
+    "situation": "Pausing Campaigns After 1-2 Days",
+    "pushback": "Campaigns usually need 7–14 days to exit the learning phase. Let's give it time to optimize based on real search data."
+  },
+  {
+    "situation": "Only Using Homepage as Landing Page",
+    "pushback": "A focused landing page usually converts better than a homepage. Even a simple page with clear CTAs can dramatically boost results."
+  },
+  {
+    "situation": "No Conversion Prioritization",
+    "pushback": "Multiple conversions are great, but confusing Google's algorithm can hurt performance. Let's prioritize 1–2 key conversions first."
+  },
+  {
+    "situation": "Only Bidding on Branded Terms",
+    "pushback": "Bidding on your brand protects your name, but it's not a growth strategy. We should also target mission-related non-brand keywords to bring new audiences."
+  }
+]
