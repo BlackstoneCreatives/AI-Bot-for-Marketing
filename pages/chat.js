@@ -6,7 +6,7 @@ export default function Chat() {
     "What's your monthly ad budget?",
     "Who is your target audience?",
     "What is your main goal for running ads? (e.g., leads, sales, brand awareness)",
-    "Thanks! You're all set."
+    "Thanks! You're all set!"
   ];
 
   const quickPrompts = [
@@ -43,10 +43,10 @@ export default function Chat() {
     setTimeout(() => {
       callback();
       setLoading(false);
-    }, 1000); // 1 second typing delay
+    }, 1000);
   };
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim()) return;
 
     const userMessage = { role: 'user', text: input };
@@ -60,4 +60,49 @@ export default function Chat() {
         if (nextQuestionIndex < onboardingQuestions.length) {
           setMessages((prev) => [
             ...prev,
-            {
+            { role: 'bot', text: onboardingQuestions[nextQuestionIndex] }
+          ]);
+          setCurrentQuestion(nextQuestionIndex);
+
+          if (nextQuestionIndex === onboardingQuestions.length - 1) {
+            localStorage.setItem('onboardingComplete', 'true');
+            setOnboardingComplete(true);
+          }
+        }
+      });
+    } else {
+      // Normal chat flow after onboarding
+      fakeBotTyping(() => {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'bot', text: `You asked: "${input}". I'll assist you with that!` }
+        ]);
+      });
+    }
+  };
+
+  const handleQuickPrompt = (prompt) => {
+    setInput(prompt);
+  };
+
+  const resetOnboarding = () => {
+    localStorage.removeItem('onboardingComplete');
+    window.location.reload();
+  };
+
+  return (
+    <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '1rem' }}>
+        {messages.map((msg, idx) => (
+          <div key={idx} style={{ marginBottom: '0.5rem', textAlign: msg.role === 'bot' ? 'left' : 'right' }}>
+            <strong>{msg.role === 'bot' ? 'Bot:' : 'You:'}</strong> {msg.text}
+          </div>
+        ))}
+        {loading && <div><em>Bot is typing...</em></div>}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {onboardingComplete && (
+        <div style={{ marginBottom: '1rem' }}>
+          <strong>Quick Prompts:</strong>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap:
