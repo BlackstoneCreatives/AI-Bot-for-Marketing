@@ -2,93 +2,70 @@ import React, { useState, useEffect, useRef } from 'react';
 
 export default function Chat() {
   const onboardingQuestions = [
-    "Welcome! Let's get started. What's your business website?",
+    "Welcome! Let's get started. What's your nonprofit's website?",
     "What's your monthly ad budget?",
     "Who is your target audience?",
-    "What is your main goal for running ads? (e.g., leads, sales, brand awareness)",
+    "What is your main goal for running ads? (e.g., donations, awareness, volunteer sign-ups)",
     "Thanks! You're all set!"
   ];
 
   const quickPrompts = [
     "Show this week's analytics",
     "Request a new campaign",
-    "Analyze a landing page",
-    "Optimize my targeting"
+    "Analyze our landing page",
+    "Optimize our targeting"
   ];
 
-  // 🚀 UPDATED HERE: Load messages from localStorage
-  const [messages, setMessages] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem('chatMessages');
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
-
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const alreadyOnboarded = localStorage.getItem('onboardingComplete') === 'true';
-    setOnboardingComplete(alreadyOnboarded);
-
-    if (!alreadyOnboarded && messages.length === 0) {
+    const storedMessages = localStorage.getItem('chatMessages');
+    if (storedMessages) {
+      setMessages(JSON.parse(storedMessages));
+    } else {
       setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
     }
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('chatMessages', JSON.stringify(messages));
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // 🚀 NEW: Save messages to localStorage
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem('chatMessages', JSON.stringify(messages));
-    }
-  }, [messages]);
-
-  const fakeBotTyping = (callback) => {
-    setLoading(true);
-    setTimeout(() => {
-      callback();
-      setLoading(false);
-    }, 800);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { role: 'user', text: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: input }]);
+    setLoading(true);
 
-    if (!onboardingComplete) {
-      fakeBotTyping(() => {
-        const nextQuestionIndex = currentQuestion + 1;
-        if (nextQuestionIndex < onboardingQuestions.length) {
-          setMessages((prev) => [
-            ...prev,
-            { role: 'bot', text: onboardingQuestions[nextQuestionIndex] }
-          ]);
-          setCurrentQuestion(nextQuestionIndex);
-
-          if (nextQuestionIndex === onboardingQuestions.length - 1) {
-            localStorage.setItem('onboardingComplete', 'true');
-            setOnboardingComplete(true);
-          }
-        }
-      });
-    } else {
-      fakeBotTyping(() => {
-        setMessages((prev) => [
+    if (onboardingStep < onboardingQuestions.length - 1) {
+      setTimeout(() => {
+        setMessages(prev => [
           ...prev,
-          { role: 'bot', text: `You asked: "${input}". I'll assist you with that!` }
+          { role: 'bot', text: onboardingQuestions[onboardingStep + 1] }
         ]);
-      });
+        setOnboardingStep(prev => prev + 1);
+        setLoading(false);
+        setInput('');
+      }, 500);
+    } else {
+      // After onboarding, eventually connect to backend API here
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          { role: 'bot', text: "Got it! What would you like to do next?" }
+        ]);
+        setLoading(false);
+        setInput('');
+      }, 500);
     }
   };
 
@@ -96,69 +73,100 @@ export default function Chat() {
     setInput(prompt);
   };
 
-  const resetOnboarding = () => {
-    localStorage.removeItem('onboardingComplete');
-    localStorage.removeItem('chatMessages');
-    window.location.reload();
-  };
+// --- Agency Account Switching Feature ---
+
+const dummyAccounts = ["SaveTheOcean", "BuildABridge", "HopeForAll", "GreenFuture"];
+const [currentAccount, setCurrentAccount] = useState(() => {
+  return localStorage.getItem('activeAccount') || dummyAccounts[0];
+});
+
+// Handle account switching
+const handleSwitchAccount = () => {
+  const accountList = dummyAccounts.map((account, index) => `${index + 1}. ${account}`).join('\n');
+  const choice = prompt(`Which account do you want to manage?\n${accountList}`);
+  const selected = dummyAccounts[parseInt(choice) - 1];
+  if (selected) {
+    setCurrentAccount(selected);
+    localStorage.setItem('activeAccount', selected);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'bot', text: `✅ You are now managing "${selected}" account.` },
+    ]);
+  } else {
+    setMessages((prev) => [
+      ...prev,
+      { role: 'bot', text: "⚠️ Invalid choice. Please try again." },
+    ]);
+  }
+};
+
+// Check inside your handleSubmit (or whatever function you send messages with):
+if (input.toLowerCase().includes("switch nonprofit account")) {
+  handleSwitchAccount();
+  setInput('');
+  return;
+}
 
   return (
-    <div className="container py-4" style={{ maxWidth: '700px' }}>
-      <h2 className="text-center mb-4">AI Campaign Assistant</h2>
-
-      <div className="mb-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', color: '#fff' }}>
+      <div style={{ minHeight: '400px', padding: '1rem', background: '#1a1a1a', borderRadius: '8px', overflowY: 'auto' }}>
         {messages.map((msg, idx) => (
-          <div key={idx} className="d-flex mb-2" style={{ justifyContent: msg.role === 'bot' ? 'flex-start' : 'flex-end' }}>
-            <div
-              className={`p-3 rounded ${msg.role === 'bot' ? 'bg-light' : 'bg-primary text-white'}`}
-              style={{ maxWidth: '75%', borderRadius: '20px' }}
-            >
-              {msg.text}
-            </div>
+          <div key={idx} style={{ marginBottom: '1rem', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+            <strong>{msg.role === 'user' ? 'You' : 'CampaignBot'}:</strong> {msg.text}
           </div>
         ))}
-        {loading && (
-          <div className="d-flex mb-2" style={{ justifyContent: 'flex-start' }}>
-            <div className="p-3 rounded bg-light" style={{ maxWidth: '75%', borderRadius: '20px' }}>
-              <em>Bot is typing...</em>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
-      {onboardingComplete && (
-        <div className="mb-3">
-          <strong>Quick Prompts:</strong>
-          <div className="d-flex flex-wrap mt-2" style={{ gap: '0.5rem' }}>
-            {quickPrompts.map((prompt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleQuickPrompt(prompt)}
-                className="btn btn-outline-primary btn-sm"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+      <div style={{ marginTop: '1rem' }}>
+        {quickPrompts.map((prompt, idx) => (
           <button
-            onClick={resetOnboarding}
-            className="btn btn-danger btn-sm mt-3"
+            key={idx}
+            onClick={() => handleQuickPrompt(prompt)}
+            style={{
+              margin: '0.25rem',
+              padding: '0.5rem 1rem',
+              background: '#333',
+              color: '#fff',
+              border: '1px solid #555',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
           >
-            Connect New Client
+            {prompt}
           </button>
-        </div>
-      )}
+        ))}
+      </div>
 
-      <div className="input-group">
+      <div style={{ marginTop: '1rem', display: 'flex' }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="form-control"
           placeholder="Type your message..."
+          style={{
+            flex: 1,
+            padding: '0.75rem',
+            border: '1px solid #555',
+            borderRadius: '6px 0 0 6px',
+            fontSize: '1rem',
+            background: '#2a2a2a',
+            color: '#fff'
+          }}
         />
-        <button onClick={handleSend} disabled={loading} className="btn btn-primary">
+        <button
+          onClick={handleSend}
+          disabled={loading}
+          style={{
+            padding: '0.75rem 1rem',
+            background: '#0070f3',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '0 6px 6px 0',
+            cursor: 'pointer',
+            fontSize: '1rem',
+          }}
+        >
           {loading ? '...' : 'Send'}
         </button>
       </div>
