@@ -5,7 +5,7 @@ export default function Chat() {
     "Welcome! Let's get started. What's your nonprofit's website?",
     "What's your monthly ad budget?",
     "Who is your target audience?",
-    "What is your main goal for running ads? (e.g., donations, awareness, volunteer sign-ups)",
+    "What is your main goal for running ads? (e.g., donations, awareness, volunteers)",
     "Thanks! You're all set!"
   ];
 
@@ -18,127 +18,144 @@ export default function Chat() {
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [showQuickPrompts, setShowQuickPrompts] = useState(false);
+  const [accounts, setAccounts] = useState(["Nonprofit A", "Nonprofit B"]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const storedMessages = localStorage.getItem('chatMessages');
-    if (storedMessages) {
-      setMessages(JSON.parse(storedMessages));
-    } else {
-      setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
+    if (typeof window !== 'undefined') {
+      const savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+      const savedAccount = localStorage.getItem('selectedAccount');
+      setMessages(savedMessages);
+      setSelectedAccount(savedAccount);
+
+      const alreadyOnboarded = localStorage.getItem('onboardingComplete') === 'true';
+      if (alreadyOnboarded && savedMessages.length > 0) {
+        setShowQuickPrompts(true);
+      } else {
+        startOnboarding();
+      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('messages', JSON.stringify(messages));
+    }
     scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedAccount', selectedAccount);
+    }
+  }, [selectedAccount]);
+
+  const startOnboarding = () => {
+    setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
+    setOnboardingStep(1);
   };
 
-  const handleSend = async () => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (!input.trim()) return;
 
-    setMessages(prev => [...prev, { role: 'user', text: input }]);
-    setLoading(true);
+    setMessages((prev) => [...prev, { role: 'user', text: input }]);
+    setInput('');
 
-    if (onboardingStep < onboardingQuestions.length - 1) {
+    if (input.toLowerCase().includes("switch nonprofit account")) {
+      handleSwitchAccount();
+      return;
+    }
+
+    if (onboardingStep > 0 && onboardingStep < onboardingQuestions.length) {
       setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { role: 'bot', text: onboardingQuestions[onboardingStep + 1] }
-        ]);
-        setOnboardingStep(prev => prev + 1);
-        setLoading(false);
-        setInput('');
+        setMessages((prev) => [...prev, { role: 'bot', text: onboardingQuestions[onboardingStep] }]);
+        setOnboardingStep(onboardingStep + 1);
+
+        if (onboardingStep === onboardingQuestions.length - 1 && typeof window !== 'undefined') {
+          localStorage.setItem('onboardingComplete', 'true');
+          setShowQuickPrompts(true);
+        }
       }, 500);
     } else {
-      // After onboarding, eventually connect to backend API here
       setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { role: 'bot', text: "Got it! What would you like to do next?" }
-        ]);
-        setLoading(false);
-        setInput('');
+        setMessages((prev) => [...prev, { role: 'bot', text: "Thanks! Let me process that for you." }]);
       }, 500);
     }
   };
 
   const handleQuickPrompt = (prompt) => {
-    setInput(prompt);
+    setMessages((prev) => [...prev, { role: 'user', text: prompt }]);
+    setTimeout(() => {
+      setMessages((prev) => [...prev, { role: 'bot', text: `Here's the response for: "${prompt}" (placeholder)` }]);
+    }, 500);
   };
 
-// --- Agency Account Switching Feature ---
+  const handleSwitchAccount = () => {
+    const newSelected = prompt(`Which account do you want to manage? Options: ${accounts.join(', ')}`);
+    if (accounts.includes(newSelected)) {
+      setSelectedAccount(newSelected);
+      setMessages((prev) => [...prev, { role: 'bot', text: `✅ You are now managing "${newSelected}" account.` }]);
+    } else {
+      setMessages((prev) => [...prev, { role: 'bot', text: "⚠️ Invalid choice. Please try again." }]);
+    }
+  };
 
-const dummyAccounts = ["SaveTheOcean", "BuildABridge", "HopeForAll", "GreenFuture"];
-const [currentAccount, setCurrentAccount] = useState(() => {
-  return localStorage.getItem('activeAccount') || dummyAccounts[0];
-});
-
-// Handle account switching
-const handleSwitchAccount = () => {
-  const accountList = dummyAccounts.map((account, index) => `${index + 1}. ${account}`).join('\n');
-  const choice = prompt(`Which account do you want to manage?\n${accountList}`);
-  const selected = dummyAccounts[parseInt(choice) - 1];
-  if (selected) {
-    setCurrentAccount(selected);
-    localStorage.setItem('activeAccount', selected);
-    setMessages((prev) => [
-      ...prev,
-      { role: 'bot', text: `✅ You are now managing "${selected}" account.` },
-    ]);
-  } else {
-    setMessages((prev) => [
-      ...prev,
-      { role: 'bot', text: "⚠️ Invalid choice. Please try again." },
-    ]);
-  }
-};
-
-// Check inside your handleSubmit (or whatever function you send messages with):
-if (input.toLowerCase().includes("switch nonprofit account")) {
-  handleSwitchAccount();
-  setInput('');
-  return;
-}
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', color: '#fff' }}>
-      <div style={{ minHeight: '400px', padding: '1rem', background: '#1a1a1a', borderRadius: '8px', overflowY: 'auto' }}>
-        {messages.map((msg, idx) => (
-          <div key={idx} style={{ marginBottom: '1rem', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
-            <strong>{msg.role === 'user' ? 'You' : 'CampaignBot'}:</strong> {msg.text}
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Campaign Assistant</h1>
+
+      <div style={{ backgroundColor: '#0d1117', padding: '20px', borderRadius: '8px', minHeight: '400px', color: '#c9d1d9' }}>
+        {messages.map((msg, index) => (
+          <div key={index} style={{ marginBottom: '12px', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+            <span style={{
+              display: 'inline-block',
+              background: msg.role === 'user' ? '#1f6feb' : '#21262d',
+              padding: '10px 15px',
+              borderRadius: '20px',
+              maxWidth: '75%',
+              wordWrap: 'break-word',
+              fontSize: '1rem'
+            }}>
+              {msg.text}
+            </span>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div style={{ marginTop: '1rem' }}>
-        {quickPrompts.map((prompt, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleQuickPrompt(prompt)}
-            style={{
-              margin: '0.25rem',
-              padding: '0.5rem 1rem',
-              background: '#333',
-              color: '#fff',
-              border: '1px solid #555',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
+      {showQuickPrompts && (
+        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+          {quickPrompts.map((prompt, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuickPrompt(prompt)}
+              style={{
+                margin: '5px',
+                backgroundColor: '#1f6feb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div style={{ marginTop: '1rem', display: 'flex' }}>
+      <form onSubmit={handleSubmit} style={{ marginTop: '20px', display: 'flex' }}>
         <input
           type="text"
           value={input}
@@ -146,30 +163,28 @@ if (input.toLowerCase().includes("switch nonprofit account")) {
           placeholder="Type your message..."
           style={{
             flex: 1,
-            padding: '0.75rem',
-            border: '1px solid #555',
+            padding: '10px 15px',
             borderRadius: '6px 0 0 6px',
-            fontSize: '1rem',
-            background: '#2a2a2a',
-            color: '#fff'
+            border: '1px solid #30363d',
+            backgroundColor: '#161b22',
+            color: '#c9d1d9'
           }}
         />
         <button
-          onClick={handleSend}
-          disabled={loading}
+          type="submit"
           style={{
-            padding: '0.75rem 1rem',
-            background: '#0070f3',
-            color: '#fff',
+            backgroundColor: '#238636',
+            color: 'white',
+            padding: '0 20px',
             border: 'none',
             borderRadius: '0 6px 6px 0',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '1rem'
           }}
         >
-          {loading ? '...' : 'Send'}
+          Send
         </button>
-      </div>
+      </form>
     </div>
   );
 }
