@@ -1,89 +1,116 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Chat() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [signupData, setSignupData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    organization: '',
-    website: '',
-    goals: '',
-    budget: '',
-  });
-  const [signupStep, setSignupStep] = useState(0);
-
-  const signupQuestions = [
-    "What's your name?",
-    "What's your email?",
-    "Create a password.",
-    "What's your organization's name?",
-    "What's your organization's website?",
-    "What's your main marketing goal?",
-    "Are you using the $10,000 Google Ad Grant?"
+  const onboardingQuestions = [
+    "Welcome! Let's get you set up. What is your nonprofit's name?",
+    "What's your nonprofit's website?",
+    "What's your role in the organization?",
+    "Would you like to use the $10,000/month Google Ad Grant? (yes/no)",
+    "If you don't have it set up, we can walk you through it!",
+    "What is your primary goal for ads? (Donations, Volunteers, Awareness, etc.)",
+    "Perfect! You're all set. 🚀 Redirecting to payment link now!"
   ];
 
-  const handleInputChange = (e) => setInput(e.target.value);
+  const quickPrompts = [
+    "Analyze last week's performance",
+    "Request a new ad campaign",
+    "Suggest optimizations",
+    "Switch nonprofit account"
+  ];
 
-  const handleSend = async () => {
-    if (signupStep < signupQuestions.length) {
-      const fields = ['name', 'email', 'password', 'organization', 'website', 'goals', 'budget'];
-      setSignupData({ ...signupData, [fields[signupStep]]: input });
-      setSignupStep(signupStep + 1);
-      setMessages((prev) => [...prev, { role: 'user', text: input }]);
-      setInput('');
-    } else {
-      if (input.toLowerCase() === 'submit signup') {
-        await fetch('/api/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(signupData),
-        });
-        setMessages((prev) => [
-          ...prev,
-          { role: 'user', text: input },
-          { role: 'bot', text: "✅ Thanks for submitting your info!" },
-          { role: 'bot', text: "🔒 To activate your account and unlock campaign building, please [click here to complete your subscription](https://buy.stripe.com/4gwdR4aIk08xdVe289)." },
-        ]);
-        setInput('');
-      } else {
-        setMessages((prev) => [...prev, { role: 'user', text: input }]);
-        setInput('');
-      }
-    }
-  };
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
 
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{ role: 'bot', text: signupQuestions[0] }]);
-    } else if (signupStep < signupQuestions.length && messages[messages.length - 1].role === 'user') {
-      setMessages((prev) => [...prev, { role: 'bot', text: signupQuestions[signupStep] }]);
+    const storedOnboarding = localStorage.getItem('onboardingComplete') === 'true';
+    const storedPaid = localStorage.getItem('isPaid') === 'true';
+    setOnboardingComplete(storedOnboarding);
+    setIsPaid(storedPaid);
+
+    if (!storedOnboarding) {
+      setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
     }
-  }, [messages, signupStep]);
+  }, []);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: 'user', text: input };
+    setMessages((prev) => [...prev, userMessage]);
+
+    if (!onboardingComplete) {
+      if (onboardingStep < onboardingQuestions.length - 1) {
+        setTimeout(() => {
+          setMessages((prev) => [...prev, { role: 'bot', text: onboardingQuestions[onboardingStep + 1] }]);
+          setOnboardingStep((prev) => prev + 1);
+        }, 500);
+      } else {
+        localStorage.setItem('onboardingComplete', 'true');
+        setOnboardingComplete(true);
+
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { role: 'bot', text: "🎉 Awesome! To continue, please complete your payment here:" },
+            { role: 'bot', text: "👉 [Complete Payment](https://buy.stripe.com/4gwdR4aIk08xdVe289)" },
+            { role: 'bot', text: "After payment, type 'I paid' to unlock full access!" }
+          ]);
+        }, 1000);
+      }
+    } else {
+      if (!isPaid) {
+        if (input.trim().toLowerCase() === 'i paid') {
+          localStorage.setItem('isPaid', 'true');
+          setIsPaid(true);
+          setMessages((prev) => [
+            ...prev,
+            { role: 'bot', text: "✅ Thanks! You now have full access. 🚀" }
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            { role: 'bot', text: "🚫 You must complete payment to access full features. [Click here](https://buy.stripe.com/4gwdR4aIk08xdVe289)" }
+          ]);
+        }
+        return;
+      }
+
+      // Paid and Onboarded Users Can Chat Normally
+      setMessages((prev) => [
+        ...prev,
+        { role: 'bot', text: `🤖 (Simulated AI Response) You asked: "${input}"` }
+      ]);
+    }
+
+    setInput('');
+  };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ minHeight: '400px', marginBottom: '2rem' }}>
-        {messages.map((m, i) => (
-          <div key={i} style={{ margin: '0.5rem 0', textAlign: m.role === 'bot' ? 'left' : 'right' }}>
-            <span style={{ background: m.role === 'bot' ? '#eee' : '#0070f3', color: m.role === 'bot' ? '#000' : '#fff', padding: '0.5rem 1rem', borderRadius: '20px' }}>
-              {m.text}
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', backgroundColor: '#0c0c0c', color: '#f5f5f5', height: '100vh' }}>
+      <div style={{ overflowY: 'auto', height: '90%' }}>
+        {messages.map((msg, index) => (
+          <div key={index} style={{ textAlign: msg.role === 'user' ? 'right' : 'left', marginBottom: '10px' }}>
+            <span style={{ padding: '8px 12px', background: msg.role === 'user' ? '#0070f3' : '#333', borderRadius: '8px', display: 'inline-block' }}>
+              {msg.text}
             </span>
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex' }}>
+      <div style={{ marginTop: '10px', display: 'flex' }}>
         <input
+          style={{ flex: 1, padding: '12px', background: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '8px' }}
           type="text"
+          placeholder="Type your message..."
           value={input}
-          onChange={handleInputChange}
-          style={{ flex: 1, padding: '1rem', borderRadius: '6px 0 0 6px', border: '1px solid #ccc' }}
-          placeholder="Type here..."
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
         />
         <button
           onClick={handleSend}
-          style={{ padding: '1rem', border: 'none', background: '#0070f3', color: '#fff', borderRadius: '0 6px 6px 0', cursor: 'pointer' }}
+          style={{ marginLeft: '10px', padding: '12px 20px', background: '#0070f3', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
         >
           Send
         </button>
