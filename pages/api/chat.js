@@ -1,72 +1,91 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Only POST allowed' });
-  }
+import React, { useState, useEffect } from 'react';
 
-  const { messages } = req.body;
+export default function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [accessToken, setAccessToken] = useState(''); // New for campaign check
 
-  if (!messages || !Array.isArray(messages) || !process.env.OPENAI_API_KEY) {
-    return res.status(400).json({ error: 'Missing messages array or API key' });
-  }
+  const onboardingQuestions = [
+    "Welcome! What's your nonprofit name?",
+    "What's your website?",
+    "What's your monthly marketing goal?",
+    "Are you using the $10,000/mo Google Ad Grant yet?",
+    "✅ Your initial setup is complete! 🎉",
+    "Before launching, let me check your Google Ads account for any existing campaigns..."
+  ];
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `
-You are an AI Google Ads strategist trained to help nonprofits and small businesses build high-performing, compliant ad campaigns. Follow these rules carefully:
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
-🧩 Strategy Rules:
-• Always use location-specific keywords for local targeting.
-• Avoid Smart Campaigns unless monthly budget exceeds $1000.
-• Use only Search campaigns for Ad Grants — no Display allowed.
-• Target CTR of 3.5% minimum; pause low-performing ads.
-• Use RSAs with at least 5 headlines and 3 descriptions.
-• Always track conversions with GA4 or Google Tag Manager.
+  const handleUserInput = async () => {
+    if (!onboardingComplete) {
+      const currentQuestion = onboardingQuestions[questionIndex];
+      setMessages(prev => [...prev, { role: 'user', text: input }]);
 
-🛑 Compliance Rules:
-• Campaigns must align with the nonprofit’s mission.
-• No misleading claims, keyword stuffing, or clickbait.
-• Enforce all Google Ad Grant policies.
+      if (questionIndex === onboardingQuestions.length - 2) {
+        setOnboardingComplete(true);
+        await checkForCampaigns();
+      } else {
+        setQuestionIndex(prev => prev + 1);
+        setMessages(prev => [...prev, { role: 'bot', text: onboardingQuestions[questionIndex + 1] }]);
+      }
+      setInput('');
+    } else {
+      setMessages(prev => [...prev, { role: 'user', text: input }]);
+      setInput('');
+    }
+  };
 
-💬 Tone:
-• Friendly, confident, strategic.
-• Explain recommendations clearly.
-• Always back up suggestions with reasoned logic.
+  const checkForCampaigns = async () => {
+    setMessages(prev => [...prev, { role: 'bot', text: '🔎 Checking existing campaigns...' }]);
 
-🙅 Pushback Behavior:
-• If a requested action would hurt performance or compliance:
-    - Push back politely but firmly.
-    - Offer a better alternative.
-    - Briefly educate the user on why it's better.
+    try {
+      const res = await fetch('/api/checkCampaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      });
+      const data = await res.json();
 
-📈 Conversion Mindset:
-• Think like a growth marketer: suggest landing page improvements if weak.
-• Focus on maximizing form submissions, donations, or calls.
+      if (data.hasCampaigns) {
+        setMessages(prev => [...prev, { role: 'bot', text: "✅ I found active campaigns! Would you like me to review them for improvements before launching new ads? (Type YES or NO)" }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'bot', text: "✅ No existing campaigns found. Ready to build your first ad!" }]);
+      }
+    } catch (error) {
+      console.error('Error checking campaigns:', error);
+      setMessages(prev => [...prev, { role: 'bot', text: "⚠️ Error checking campaigns. Please try again later." }]);
+    }
+  };
 
-Follow additional best practices from:
-https://notion.so/Google-Ads-Best-Practices-1e0afca27278809e9d5ad8afa12fcb16
-            `
-          },
-          ...messages
-        ],
-        temperature: 0.7,
-      }),
-    });
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleUserInput();
+    }
+  };
 
-    const data = await response.json();
-    const result = data?.choices?.[0]?.message?.content?.trim();
-    res.status(200).json({ result });
-  } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: 'Error communicating with OpenAI' });
-  }
+  useEffect(() => {
+    setMessages([{ role: 'bot', text: onboardingQuestions[0] }]);
+  }, []);
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ height: '400px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
+        {messages.map((msg, idx) => (
+          <div key={idx} style={{ marginBottom: '10px', color: msg.role === 'bot' ? 'blue' : 'black' }}>
+            <strong>{msg.role === 'bot' ? 'Bot' : 'You'}:</strong> {msg.text}
+          </div>
+        ))}
+      </div>
+      <input
+        type="text"
+        placeholder="Type here..."
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyPress}
+        style={{ width: '80%', padding: '10px', fontSize: '16px' }}
+      />
+      <button onClick={handleUserInput} style={{ padding: '10px', fontSize: '16px' }}>Send</button>
+    </div>
+  );
 }
