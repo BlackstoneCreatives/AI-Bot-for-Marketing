@@ -1,134 +1,159 @@
 import React, { useState, useEffect } from 'react';
-
-const onboardingQuestions = [
-  "👋 Welcome! Let's set up your nonprofit. What’s your name?",
-  "📧 Great! What's your email address?",
-  "🔒 Now, create a password you'd like to use.",
-  "🏢 What is your organization's name?",
-  "🌐 What is your organization's website? (We'll scan it to learn!)",
-  "🎯 What is your main goal for running ads? (e.g., donations, volunteers, awareness)",
-  "🌎 Where should we target your ads? (e.g., United States, South Carolina, Greenville SC)",
-  "💸 Are you planning to use the $10,000/month Google Ad Grant? (yes/no)",
-  "✅ First setup complete! 🚀 Now preparing your draft campaign..."
-];
+import { saveGoal, getGoal, updateGoalProgress, getGoalProgress } from '../lib/goalManager';
+import faqResponses from '../data/faqResponses.json';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [step, setStep] = useState(0);
 
+  const onboardingQuestions = [
+    "👋 Welcome! Let’s get you set up. What’s your name?",
+    "📧 What’s your email address?",
+    "🏢 What’s your nonprofit’s name?",
+    "🌐 What’s your nonprofit’s website?",
+    "🎯 What’s your main goal for ads? (e.g., donations, volunteers, awareness)",
+    "📍 What location should we target? (e.g., United States, SC, Greenville)",
+    "💸 Are you using the $10K/month Google Ad Grant? (yes/no)",
+    "✅ Onboarding complete! Setting a growth goal for Month 1...",
+  ];
+
   useEffect(() => {
-    if (step === 0) {
-      addBotMessage(onboardingQuestions[0]);
+    if (messages.length === 0) {
+      setMessages([{ text: onboardingQuestions[0], sender: 'bot' }]);
     }
   }, []);
 
-  const addBotMessage = (text) => {
-    setMessages((msgs) => [...msgs, { text, sender: 'bot' }]);
+  const addMessage = (text, sender) => {
+    setMessages((prev) => [...prev, { text, sender }]);
   };
 
-  const addUserMessage = (text) => {
-    setMessages((msgs) => [...msgs, { text, sender: 'user' }]);
-  };
-
-  const handleSubmit = async (e) => {
+  const handleUserInput = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    addUserMessage(input);
+    const userMessage = input.trim();
+    addMessage(userMessage, 'user');
+    setInput('');
 
-    // Simulated Slack alert trigger
-    if (input.toLowerCase().includes("use the advanceai team")) {
-      await fetch("/api/slackNotify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "team_request", message: input })
-      });
+    // Bot is typing...
+    setTimeout(() => {
+      handleBotResponse(userMessage);
+    }, 600);
+  };
+
+  const handleBotResponse = (userInput) => {
+    // Check for FAQ match
+    const faq = faqResponses.find((item) =>
+      userInput.toLowerCase().includes(item.question.toLowerCase())
+    );
+    if (faq) {
+      addMessage(faq.answer, 'bot');
+      return;
     }
 
-    if (step + 1 < onboardingQuestions.length) {
-      setTimeout(() => {
-        addBotMessage(onboardingQuestions[step + 1]);
-        setStep(step + 1);
-      }, 800);
-    } else {
-      addBotMessage("💳 Ready to launch your first campaign. Type \"paid\" when you’ve completed checkout.");
+    // Continue onboarding
+    if (step < onboardingQuestions.length - 1) {
+      setStep(step + 1);
+      addMessage(onboardingQuestions[step + 1], 'bot');
+
+      // On goal-setting step
+      if (step + 1 === onboardingQuestions.length - 1) {
+        const goal = "Increase conversions by 25%";
+        saveGoal({ month: 1, goal });
+        addMessage(`📌 We’ve set your Month 1 goal: ${goal}`, 'bot');
+      }
+
+      return;
     }
 
-    setInput("");
+    // After onboarding – check for goal progress request
+    if (userInput.toLowerCase().includes('goal progress')) {
+      const progress = getGoalProgress();
+      addMessage(`📈 Progress toward your goal: ${progress}`, 'bot');
+      return;
+    }
+
+    // Default fallback
+    addMessage("🤖 I'm still learning. We'll get smarter over time!", 'bot');
   };
 
   return (
-    <div className="chat-container">
-      <div className="messages">
+    <div style={styles.chatWrapper}>
+      <div style={styles.messages}>
         {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.sender}`}>{msg.text}</div>
+          <div key={i} style={{ ...styles.message, ...(msg.sender === 'user' ? styles.user : styles.bot) }}>
+            {msg.text}
+          </div>
         ))}
       </div>
-      <form className="input-form" onSubmit={handleSubmit}>
+      <form onSubmit={handleUserInput} style={styles.form}>
         <input
-          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your answer..."
-          autoFocus
+          placeholder="Type a message..."
+          style={styles.input}
         />
-        <button type="submit">
-          <span>Send</span>
-        </button>
+        <button type="submit" style={styles.button}>➤</button>
       </form>
-      <style jsx>{`
-        .chat-container {
-          display: flex;
-          flex-direction: column;
-          height: 100vh;
-          max-width: 600px;
-          margin: 0 auto;
-          background: #1a1a1a;
-          color: white;
-        }
-        .messages {
-          flex: 1;
-          overflow-y: auto;
-          padding: 1rem;
-        }
-        .message {
-          margin-bottom: 1rem;
-          padding: 0.75rem 1rem;
-          border-radius: 8px;
-        }
-        .message.user {
-          background-color: #00c6ff;
-          color: #000;
-          align-self: flex-end;
-        }
-        .message.bot {
-          background: #333;
-          align-self: flex-start;
-        }
-        .input-form {
-          display: flex;
-          padding: 1rem;
-          border-top: 1px solid #444;
-        }
-        input {
-          flex: 1;
-          padding: 0.75rem;
-          border-radius: 20px;
-          border: none;
-          outline: none;
-          font-size: 1rem;
-        }
-        button {
-          background: #00c6ff;
-          border: none;
-          margin-left: 0.5rem;
-          padding: 0.75rem 1.25rem;
-          border-radius: 50px;
-          cursor: pointer;
-        }
-      `}</style>
     </div>
   );
 }
 
+const styles = {
+  chatWrapper: {
+    maxWidth: 600,
+    margin: '0 auto',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    background: '#121212',
+    color: '#fff',
+  },
+  messages: {
+    flex: 1,
+    padding: 20,
+    overflowY: 'auto',
+  },
+  message: {
+    padding: '12px 16px',
+    borderRadius: 12,
+    marginBottom: 10,
+    maxWidth: '80%',
+    lineHeight: 1.5,
+  },
+  user: {
+    alignSelf: 'flex-end',
+    background: '#00c6ff',
+    color: '#000',
+  },
+  bot: {
+    alignSelf: 'flex-start',
+    background: '#333',
+    color: '#fff',
+  },
+  form: {
+    display: 'flex',
+    padding: 16,
+    borderTop: '1px solid #444',
+  },
+  input: {
+    flex: 1,
+    padding: '12px 16px',
+    borderRadius: 24,
+    border: 'none',
+    outline: 'none',
+    fontSize: 16,
+    background: '#1f1f1f',
+    color: '#fff',
+  },
+  button: {
+    marginLeft: 10,
+    background: '#00c6ff',
+    border: 'none',
+    padding: '12px 16px',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    fontSize: 18,
+  },
+};
