@@ -2,17 +2,15 @@ import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-// Load environment variables
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-08-16',
+  apiVersion: '2023-10-16',
 });
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Disable body parsing (required for Stripe)
 export const config = {
   api: {
     bodyParser: false,
@@ -22,12 +20,16 @@ export const config = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
-  const buf = await buffer(req);
   const sig = req.headers['stripe-signature'];
-
+  const rawBody = await buffer(req);
   let event;
+
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(
+      rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
   } catch (err) {
     console.error('Webhook Error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -35,20 +37,24 @@ export default async function handler(req, res) {
 
   const customerId = event.data.object.customer;
 
-  // Handle events
-  if (event.type === 'customer.subscription.created' || event.type === 'invoice.paid') {
+  if (
+    event.type === 'customer.subscription.created' ||
+    event.type === 'customer.subscription.updated'
+  ) {
+    const status = event.data.object.status === 'active' ? 'active' : 'inactive';
+
     await supabase
       .from('users')
-      .update({ is_active: true })
+      .update({ access_status: status })
       .eq('stripe_customer_id', customerId);
   }
 
   if (event.type === 'customer.subscription.deleted') {
     await supabase
       .from('users')
-      .update({ is_active: false })
+      .update({ access_status: 'inactive' })
       .eq('stripe_customer_id', customerId);
   }
 
-  res.status(200).json({ received: true });
+  res.json({ received: true });
 }
