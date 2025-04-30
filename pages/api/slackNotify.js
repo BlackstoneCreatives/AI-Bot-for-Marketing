@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const response = await fetch('https://hooks.slack.com/services/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', {
+    const response = await fetch(process.env.SLACK_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -22,9 +22,9 @@ export default async function handler(req, res) {
       throw new Error(`Slack API error: ${response.statusText}`);
     }
 
-    res.status(200).json({ message: 'Notification sent to Slack' });
+    res.status(200).json({ message: 'Notification sent to Slack!' });
   } catch (error) {
-    console.error('Slack notify error:', error);
+    console.error('Slack notification error:', error);
     res.status(500).json({ message: 'Failed to send notification to Slack' });
   }
 }
