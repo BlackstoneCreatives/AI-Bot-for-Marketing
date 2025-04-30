@@ -1,163 +1,103 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { fetchUserGoal } from '../lib/goalFetcher';
-import { saveUserGoal } from '../lib/goalSaver';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-export default function Chat() {
-  const [loading, setLoading] = useState(true);
-  const [userActive, setUserActive] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+const Chat = () => {
+  const [userInput, setUserInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [userGoal, setUserGoal] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
-        return;
+  // Fetch user data and goal
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch('/api/user-goals');
+      const data = await response.json();
+      if (data.goal) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { text: `Your current goal: ${data.goal}`, sender: 'bot' },
+        ]);
       }
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('access_status, role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.access_status === 'active') {
-        setUserActive(true);
-        setUserRole(profile.role || 'user');
-
-        const goal = await fetchUserGoal(user.id);
-        if (goal) setUserGoal(goal);
-      } else {
-        setUserActive(false);
-      }
-
-      setLoading(false);
-    };
-
-    checkUser();
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const newMessage = { sender: 'user', text: input.trim() };
-    setMessages((prev) => [...prev, newMessage]);
-    setInput('');
-
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse = {
-        sender: 'bot',
-        text: `Thanks for your message: "${newMessage.text}"`,
-      };
-      setMessages((prev) => [...prev, botResponse]);
-    }, 1000);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!userActive)
-    return <div>🚫 You must have an active subscription to use this chat.</div>;
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const handleInputChange = (event) => {
+    setUserInput(event.target.value);
+  };
+
+  const handleFormSubmit = async (event) => {
+    event.preventDefault();
+    if (!userInput.trim()) return;
+
+    // Add user input to the chat
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: userInput, sender: 'user' },
+    ]);
+    setUserInput('');
+    setLoading(true);
+
+    // Send the user input to the backend or AI for processing
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      body: JSON.stringify({ input: userInput }),
+    });
+    const data = await response.json();
+
+    setLoading(false);
+
+    // Add bot response to the chat
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { text: data.response, sender: 'bot' },
+    ]);
+  };
 
   return (
-    <div style={styles.chatContainer}>
-      {userGoal && (
-        <div style={styles.goalBox}>
-          🎯 <strong>Goal:</strong> {userGoal.goal_description} <br />
-          📊 <strong>Target:</strong> {userGoal.goal_value}% increase <br />
-          🚧 <strong>Progress:</strong> {userGoal.progress_value || 0}%
-        </div>
-      )}
-
-      <div style={styles.messages}>
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            style={{
-              ...styles.message,
-              alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.sender === 'user' ? '#007bff' : '#333',
-              color: msg.sender === 'user' ? '#fff' : '#eee',
-            }}
-          >
+    <div className="chat-container">
+      <div className="header">
+        <h2>AdvanceAI</h2>
+        <p>Build smarter nonprofit solutions. Eliminate agency costs. Automate your brand growth with AI.</p>
+      </div>
+      <div className="messages" id="messages">
+        {messages.map((msg, index) => (
+          <div key={index} className={`message ${msg.sender}`}>
             {msg.text}
           </div>
         ))}
+        {loading && (
+          <div className="message bot">
+            <div className="typing">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form className="input-form" id="input-form" onSubmit={handleFormSubmit}>
         <input
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          style={styles.input}
-          placeholder="Ask a question..."
+          id="user-input"
+          placeholder="Ask AdvanceAI..."
+          autoComplete="off"
+          value={userInput}
+          onChange={handleInputChange}
+          required
         />
-        <button type="submit" style={styles.button}>
-          Send
+        <button type="submit">
+          <span>➤</span>
         </button>
       </form>
     </div>
   );
-}
-
-const styles = {
-  chatContainer: {
-    width: '100%',
-    maxWidth: 600,
-    margin: '0 auto',
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#1a1a1a',
-    color: '#fff',
-  },
-  goalBox: {
-    padding: '12px 16px',
-    backgroundColor: '#111',
-    borderBottom: '1px solid #333',
-    fontSize: '14px',
-  },
-  messages: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
-  },
-  message: {
-    padding: 12,
-    borderRadius: 12,
-    maxWidth: '80%',
-    wordWrap: 'break-word',
-  },
-  form: {
-    display: 'flex',
-    borderTop: '1px solid #333',
-    backgroundColor: '#121212',
-  },
-  input: {
-    flex: 1,
-    padding: 12,
-    fontSize: 14,
-    border: 'none',
-    outline: 'none',
-    color: '#fff',
-    backgroundColor: '#222',
-  },
-  button: {
-    padding: '0 16px',
-    background: '#007bff',
-    color: '#fff',
-    border: 'none',
-    cursor: 'pointer',
-  },
 };
+
+export default Chat;
